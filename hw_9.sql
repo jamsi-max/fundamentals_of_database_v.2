@@ -267,11 +267,14 @@ FROM users u
 JOIN messages m 
 	ON u.id = m.from_user_id AND m.to_user_id = 4 OR u.id = m.to_user_id AND m.from_user_id = 4 
 JOIN friendship f 
-	ON m.from_user_id = f.user_id AND m.to_user_id = f.friend_id AND f.status_id = 2 
+	ON 
+		(m.from_user_id = f.user_id AND m.to_user_id = f.friend_id) 
+    OR 
+		(m.from_user_id = f.friend_id AND m.to_user_id = f.user_id) AND f.status_id = 2 
 JOIN users u2 ON u2.id = 4 
 GROUP BY `To` 
 ORDER BY Total DESC LIMIT 1;
-
+  
 -- Задание № 5 
 -- Найти 10 пользователей, которые проявляют наименьшую активность в использовании социальной сети.
 
