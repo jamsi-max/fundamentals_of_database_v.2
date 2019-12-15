@@ -120,7 +120,7 @@ GRANT SELECT ON shop.username TO shop_read;
 DELIMITER //
 DROP FUNCTION IF EXISTS hello//
 CREATE FUNCTION hello()
-RETURNS TINYTEXT READS SQL DATA 
+RETURNS TINYTEXT NO SQL 
 BEGIN
 	IF (hour(now()) > 6 AND hour(now()) < 12) THEN
 		RETURN 'Доброе утро!';
@@ -172,11 +172,14 @@ FOR EACH ROW
 BEGIN
     IF OLD.`name` IS NULL AND NEW.`description` IS NULL THEN
 		SET NEW.`description` = OLD.`description`;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = "Ошибка, оба поля не могут быть NULL ";
 	ELSEIF NEW.`name` IS NULL AND OLD.`description` IS NULL THEN
 		SET NEW.`name` = OLD.`name`;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = "Ошибка, оба поля не могут быть NULL ";
 	ELSEIF NEW.`name` IS NULL AND NEW.`description` IS NULL THEN
 		SET NEW.`name` = OLD.`name`;
 		SET NEW.`description` = OLD.`description`;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = "Ошибка, оба поля не могут быть NULL ";
     END IF;
 END//
 DELIMITER ;
@@ -184,16 +187,11 @@ DELIMITER ;
 -- тригер на вставку нового значения
 DROP TRIGGER IF EXISTS products_name_description_insert;
 DELIMITER //
-CREATE TRIGGER products_name_description_insert BEFORE INSERt ON products
+CREATE TRIGGER products_name_description_insert BEFORE INSERT ON products
 FOR EACH ROW
 BEGIN
-	DECLARE new_name TINYTEXT;
-	DECLARE new_description TINYTEXT;
-	SELECT `name` INTO new_name FROM products ORDER BY RAND() LIMIT 1;
-	SELECT `description` INTO new_description FROM products ORDER BY RAND() LIMIT 1;
     IF NEW.`name` IS NULL AND NEW.`description` IS NULL THEN
-		SET NEW.`name` = COALESCE(NEW.`name`, new_name);
-		SET NEW.`description` = COALESCE(NEW.`description`, new_description);
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = "Ошибка, оба поля не могут быть NULL ";
     END IF;
 END//
 DELIMITER ;
@@ -208,7 +206,7 @@ INSERT INTO products(id, name, description, price, catalog_id) VALUE (NULL, NULL
 INSERT INTO products(id, name, description, price, catalog_id) VALUE (NULL, 'Intel Core i9', NULL, '777.00', '1');
 INSERT INTO products(id, name, description, price, catalog_id) VALUE (NULL, NULL, NULL, '777.00', '1');
 SELECT * FROM products;
-
+DELETE from products where id=7;
 -- Задание № 3 (по желанию) Напишите хранимую функцию для вычисления произвольного числа Фибоначчи. Числами Фибоначчи называется 
 -- последовательность в которой число равно сумме двух предыдущих чисел. Вызов функции FIBONACCI(10) должен возвращать число 55.
 
@@ -265,7 +263,7 @@ SELECT
     COUNT(*) AS Total 
 FROM users u 
 JOIN messages m 
-	ON u.id = m.from_user_id AND m.to_user_id = 4 OR u.id = m.to_user_id AND m.from_user_id = 4 
+	ON (u.id = m.from_user_id AND m.to_user_id = 4) OR (u.id = m.to_user_id AND m.from_user_id = 4) 
 JOIN friendship f 
 	ON 
 		(m.from_user_id = f.user_id AND m.to_user_id = f.friend_id) 
